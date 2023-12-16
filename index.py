@@ -9,8 +9,11 @@ import pathlib
 import argparse
 import bibtexparser
 import pypdfium2 as pdfium
+from pylatexenc.latex2text import LatexNodes2Text
 import xapian
 from common import QueryFields, FilePaths, load_from_filepath
+
+latex_parser = LatexNodes2Text()
 
 parser = argparse.ArgumentParser(description='create bibtexapian index')
 parser.add_argument('--datapath', '-d', required=True, metavar='filename', type=pathlib.Path, help='directory where to store the index')
@@ -97,10 +100,17 @@ for entry in entries:
     entryid = entry['ID']
     if 'file' not in entry:
         unindex_document(entryid)
+        print(f"skipping {entryid} : has no files")
+        continue
+#TODO: do not index languages != en
+    if 'lang' in entry and entry['lang'] != 'en':
+        unindex_document(entryid)
+        print(f"skipping {entryid} : unknown language")
         continue
     filepaths = bibtex_file_attribute_to_paths(entry, args.paperpath)
     if len(filepaths) == 0:
         unindex_document(entryid)
+        print(f"skipping {entryid} : has no readable files")
         continue
     entry['file'] = filepaths
 
@@ -110,9 +120,9 @@ for entry in entries:
     termgenerator.set_document(doc)
 
     # Index each field with a suitable prefix.
-    termgenerator.index_text(entry['title'], 1, str(QueryFields.TITLE))
+    termgenerator.index_text(latex_parser.latex_to_text(entry['title']), 1, str(QueryFields.TITLE))
     termgenerator.index_text(entryid, 1, str(QueryFields.BIBKEY))
-    termgenerator.index_text(entry['author'].replace(' and ',', ') , 1, str(QueryFields.AUTHOR))
+    termgenerator.index_text(latex_parser.latex_to_text(entry['author'].replace(' and ',', ')), 1, str(QueryFields.AUTHOR))
 
     hashes = {}
     for filepath in filepaths:
@@ -121,12 +131,14 @@ for entry in entries:
 
     if entryid in checksum_dict:
         if equal_dicts(checksum_dict[entryid], hashes):
+            print(f"skipping {entryid} : already indexed")
             continue
 
+    print(f"indexing {entryid}")
     checksum_dict[entryid] = hashes
 
     for filepath in filepaths:
-        print(f"index {filepath}")
+        print(f"indexing file {filepath}")
         pdf = pdfium.PdfDocument(filepath)
         for pdfpage in pdf:
             text = pdfpage.get_textpage().get_text_range()
