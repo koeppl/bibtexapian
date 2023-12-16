@@ -11,12 +11,19 @@ import enum
 import pathlib
 import argparse
 import xapian
-
-from common import * 
+from common import QueryFields, FilePaths, load_from_filepath
 
 parser = argparse.ArgumentParser(description='create bibtexapian index')
-parser.add_argument('datapath', required=True, metavar='filename', type=pathlib.Path, help='directory where to store the index')
+parser.add_argument('--datapath', '-d', required=True, metavar='filename', type=pathlib.Path, help='directory where to load the index')
+parser.add_argument('fulltextquery', default='', nargs='?', type=str, help='fulltext query text')
+for k in range(QueryFields.FULLTEXT+1,QueryFields.NONE):
+	parser.add_argument('-' + str(QueryFields(k)), default='', nargs='?', type=str, help='query text for parameter' + str(QueryFields(k)))
 args = parser.parse_args()
+
+queryfields = [""] * QueryFields.NONE
+queryfields[QueryFields.FULLTEXT] = args.fulltextquery
+for k in range(QueryFields.FULLTEXT+1,QueryFields.NONE):
+	queryfields[k] = vars(args)[str(QueryFields(k))]
 
 
 class bcolors(enum.StrEnum):
@@ -53,10 +60,10 @@ def config_queryparser():
 		q.add_prefix(str(QueryFields(k)), str(QueryFields(k)))
 	return q
 
-stored_entries = load_from_filepath(args.datapath / STORED_ENTRIES_PATH)
+stored_entries = load_from_filepath(args.datapath / FilePaths.STORED_ENTRIES_PATH)
 queryparser = config_queryparser()
 
-xapian_db = xapian.Database(args.datapath / XAPIAN_DB_PATH)
+xapian_db = xapian.Database(str(args.datapath / FilePaths.XAPIAN_DB_PATH))
 # Set up a QueryParser with a stemmer and suitable prefixes
 
 def xapian_query(querystring : str, limit : int, offset = 0):
@@ -103,9 +110,10 @@ def build_querystring(querystrings) -> str:
 			querystring += " " + str(QueryFields(k)) + ":" + querystrings[k]
 	return querystring
 
-queryfields = [""] * QueryFields.NONE
 queryfield_cursor = 0
 
+if sum(len(field) for field in queryfields) > 0:
+	query(build_querystring(queryfields))
 while True:
 	while True:
 		c = get_getch()

@@ -1,7 +1,6 @@
 """ common """
 # pylint: disable=bad-indentation,line-too-long,invalid-name
 
-from pathlib import Path
 import os
 import pickle
 import enum
@@ -22,10 +21,11 @@ class QueryFields(enum.IntEnum):
 			return 't'
 		return ''
 
-PAPER_PATH = Path.home() / "paper"
-XAPIAN_DB_PATH = "xapian"
-CHKSUM_DICT_PATH = "paper.dict"
-STORED_ENTRIES_PATH = "bibtex.dat"
+class FilePaths(enum.StrEnum):
+    """ static filenames of the data directory used to index and query """
+    XAPIAN_DB_PATH = "xapian"
+    CHKSUM_DICT_PATH = "paper.dict"
+    STORED_ENTRIES_PATH = "bibtex.dat"
 
 def load_from_filepath(path):
 	""" deserialize object from file """

@@ -2,6 +2,7 @@
 """ index pdf files from bibtex """
 # pylint: disable=bad-indentation,line-too-long,invalid-name
 
+import os
 import pickle
 import hashlib
 import pathlib
@@ -9,15 +10,17 @@ import argparse
 import bibtexparser
 import pypdfium2 as pdfium
 import xapian
-from common import * 
+from common import QueryFields, FilePaths, load_from_filepath
 
 parser = argparse.ArgumentParser(description='create bibtexapian index')
-parser.add_argument('datapath', required=True, metavar='filename', type=pathlib.Path, help='directory where to store the index')
-parser.add_argument('paperpath', required=True, metavar='filename', type=pathlib.Path, help='directory where the papers are stored')
-parser.add_argument('bibfile', required=True, metavar='filename', type=argparse.FileType('r', encoding='utf-8'), help='bibtex file to index')
+parser.add_argument('--datapath', '-d', required=True, metavar='filename', type=pathlib.Path, help='directory where to store the index')
+parser.add_argument('--paperpath', '-p', required=True, metavar='filename', type=pathlib.Path, help='directory where the papers are stored')
+parser.add_argument('--bibfile', '-b', required=True, metavar='filename', type=argparse.FileType('r', encoding='utf-8'), help='bibtex file to index')
 args = parser.parse_args()
 
-args.paperpath.mkdir(parents=True, exist_ok=True)
+args.datapath.mkdir(parents=True, exist_ok=True)
+bibtex_db = bibtexparser.load(args.bibfile)
+entries = bibtex_db.entries
 
 
 def bibtex_file_attribute_to_paths(bibtex_entry, paperpath):
@@ -28,8 +31,8 @@ def filter_readable_filepaths(paths, paperpath):
 	""" filters a list of filepaths by only readable ones """
 	readable_paths = []
 	for filename in paths:
-		path = Path(filename)
-		if not filename.is_absolute():
+		path = pathlib.Path(filename)
+		if not path.is_absolute():
 				path = paperpath / path
 		if not os.path.isfile(path) or not os.access(path, os.R_OK):
 			continue
@@ -60,21 +63,17 @@ def bibtexlist_to_dic(bibtexlist) -> dict:
     return r
 
 
-stored_entries = load_from_filepath(args.datapath / STORED_ENTRIES_PATH)
-checksum_dict = load_from_filepath(args.datapath / CHKSUM_DICT_PATH)
+stored_entries = load_from_filepath(args.datapath / FilePaths.STORED_ENTRIES_PATH)
+checksum_dict = load_from_filepath(args.datapath / FilePaths.CHKSUM_DICT_PATH)
 
 
 # Create or open the database we're going to be writing to.
-db = xapian.WritableDatabase(args.datapath / XAPIAN_DB_PATH, xapian.DB_CREATE_OR_OPEN)
+db = xapian.WritableDatabase(str(args.datapath / FilePaths.XAPIAN_DB_PATH), xapian.DB_CREATE_OR_OPEN)
 
 # Set up a TermGenerator that we'll use in indexing.
 termgenerator = xapian.TermGenerator()
 termgenerator.set_stemmer(xapian.Stem("en"))
 
-entries = []
-with open(args.bibfile, 'r', encoding='utf-8') as bibtex_file:
-    arxiv_db = bibtexparser.load(bibtex_file)
-    entries = arxiv_db.entries
 
 # remove entries that are no longer in the bibtex file
 indexed_entries = bibtexlist_to_dic(entries)
@@ -142,6 +141,5 @@ for entry in entries:
     doc.add_boolean_term(entryid)
     db.replace_document(entryid, doc)
 
-save_to_filepath(args.datapath / STORED_ENTRIES_PATH, indexed_entries)
-save_to_filepath(args.datapath / CHKSUM_DICT_PATH, checksum_dict)
-
+save_to_filepath(args.datapath / FilePaths.STORED_ENTRIES_PATH, indexed_entries)
+save_to_filepath(args.datapath / FilePaths.CHKSUM_DICT_PATH, checksum_dict)
