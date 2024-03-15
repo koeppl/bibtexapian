@@ -9,7 +9,8 @@
 From https://github.com/ninemoreminutes/xapian-bindings/issues/10
 
 ```
+pip install wheel
 pip install sphinxcontrib-applehelp==1.0.2 sphinxcontrib-serializinghtml sphinxcontrib-devhelp sphinxcontrib-htmlhelp sphinxcontrib-jsmath sphinxcontrib-qthelp
-pip install --no-cache-dir -r requirements.txt
+pip install --no-cache-dir  xapian-bindings
 ```
 
