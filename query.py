@@ -16,14 +16,14 @@ from common import QueryFields, FilePaths, load_from_filepath
 parser = argparse.ArgumentParser(description='create bibtexapian index')
 parser.add_argument('--datapath', '-d', required=True, metavar='filename', type=pathlib.Path, help='directory where to load the index')
 parser.add_argument('fulltextquery', default='', nargs='?', type=str, help='fulltext query text')
-for k in range(QueryFields.FULLTEXT+1,QueryFields.NONE):
-	parser.add_argument('-' + str(QueryFields(k)), default='', nargs='?', type=str, help='query text for parameter' + str(QueryFields(k)))
+for field_it in range(QueryFields.FULLTEXT+1,QueryFields.NONE):
+	parser.add_argument('-' + str(QueryFields(field_it)), default='', nargs='?', type=str, help='query text for parameter ' + str(QueryFields(field_it)))
 args = parser.parse_args()
 
 queryfields = [""] * QueryFields.NONE
 queryfields[QueryFields.FULLTEXT] = args.fulltextquery
-for k in range(QueryFields.FULLTEXT+1,QueryFields.NONE):
-	queryfields[k] = vars(args)[str(QueryFields(k))]
+for field_it in range(QueryFields.FULLTEXT+1,QueryFields.NONE):
+	queryfields[field_it] = vars(args)[str(QueryFields(field_it))]
 
 
 class bcolors(enum.StrEnum):
