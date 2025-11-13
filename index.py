@@ -81,7 +81,7 @@ termgenerator.set_stemmer(xapian.Stem("en"))
 # remove entries that are no longer in the bibtex file
 indexed_entries = bibtexlist_to_dic(entries)
 if len(stored_entries) > 0:
-    for bibtexkey in stored_entries:
+    for bibtexkey in list(stored_entries.keys()):
         if bibtexkey not in indexed_entries:
             print(f'deleting {bibtexkey}')
             db.delete_document(bibtexkey)
